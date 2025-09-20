@@ -1,0 +1,56 @@
+.card{
+    padding: 1em;
+    box-shadow: 0 0 5px #ffdfdf;
+    border-radius: 5px;
+    overflow: hidden;
+}
+.card .top{
+    text-align: center;
+}
+
+.card p{
+    font-weight: bold;
+    color: blue;
+}
+.card button{
+    outline: 0;
+    border: 0;
+    color: #fff;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 400;
+    padding: 2em 4em;
+    width: 100;
+    background: blue;
+}
+
+.card .dropbox{
+    height: 3em;
+    border: 2px dashed blue;
+    border-radius: 5px;
+    color: blue;
+    background: #ffdfdf;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    user-select: none;
+    -webkit-user-select: none;
+    margin-top: 1em;
+}
+
+.card .dropbox .visible{
+    font-size: 18px;
+}
+.card .select {
+    color: indigo;
+    margin-left: 0.5px;
+    cursor: pointer;
+    transition: 0.4s;
+}
+.card .select:hover{
+    opacity: 0.6;
+}
+.delete{
+    z-index: 10;
+    color: blue;
+}
