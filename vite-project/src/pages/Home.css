@@ -1,9 +1,23 @@
+/* Center the card on the page */
+body {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  margin: 0;
+  padding: 1.25rem;
+  box-sizing: border-box;
+}
+
 .card{
     padding: 1em;
-    box-shadow: 0 0 5px #ffdfdf;
-    border-radius: 5px;
+    box-shadow: 0 0 0.3rem #ffdfdf;
+    border-radius: 0.3rem;
     overflow: hidden;
+    max-width: 37.5rem;
+    width: 100%;
 }
+
 .card .top{
     text-align: center;
 }
@@ -11,23 +25,31 @@
 .card p{
     font-weight: bold;
     color: blue;
+    margin: 0 0 1em 0;
 }
+
 .card button{
     outline: 0;
     border: 0;
     color: #fff;
-    border-radius: 4px;
-    cursor: pointer;
+    border-radius: 0.25rem;
+    cursor: pointer; 
     font-weight: 400;
-    padding: 2em 4em;
-    width: 100;
+    padding: 1em 2em;
+    width: 100%;
     background: blue;
+    margin-top: 1em;
+    transition: background-color 0.2s ease, transform 0.1s ease;
+}
+.card button:hover{
+    background: #0000cc;
 }
 
 .card .dropbox{
-    height: 3em;
-    border: 2px dashed blue;
-    border-radius: 5px;
+    min-height: 3em;
+    padding: 1em;
+    border: 0.1rem dashed blue;
+    border-radius: 0.3rem;
     color: blue;
     background: #ffdfdf;
     display: flex;
@@ -36,24 +58,30 @@
     user-select: none;
     -webkit-user-select: none;
     margin-top: 1em;
+    flex-wrap: wrap;
+    text-align: center;
 }
 
 .card .dropbox .visible{
-    font-size: 18px;
+    font-size: 1rem;
 }
-.card .select {
+
+.card .selectbrowse {
     color: indigo;
-    margin-left: 0.5px;
+    margin-left: 0.03rem;
     cursor: pointer;
     transition: 0.4s;
 }
-.card .select:hover{
+
+.card .selectbrowse:hover{
     opacity: 0.6;
 }
+
 .delete{
     z-index: 10;
     color: blue;
 }
+
 .card .container{
     width: 100%;
     height: auto;
@@ -61,56 +89,104 @@
     justify-content: flex-start;
     align-items: flex-start;
     flex-wrap: wrap;
-    max-height: 200px;
+    max-height: 12.5rem;
     overflow-y: auto;
-    margin-top: 10px;
+    margin-top: 0.625rem;
 }
+
 .card .container .image{
-    width: 75px;
-    margin-right: 5px;
-    height: 75px;
+    width: 4.6rem;
+    margin-right: 0.3rem;
+    height: 4.6rem;
     position: relative;
-    margin-bottom: 8px;
+    margin-bottom: 0.5rem;
 }
 
 .card .container .image img{
     width: 100%;
     height: 100%;
-    border-radius: 5px;
+    border-radius: 0.3rem;
+    object-fit: cover;
 }
+
 .card .container .image span{
     position: absolute;
-    top: 2px;
-    right: 9px;
-    font-size: 20px;
+    top: 0.1rem;
+    right: 0.5rem;
+    font-size: 1.25rem;
     cursor: pointer;
-
 }
+
 .cardinput,
 .card .dropbox .on-drop,
 .card .dropbox .dragover .visible{
     display: none;
 }
+
+.dropbox span {
+  pointer-events: none;
+}
+
+.dropbox .selectbrowse {
+  pointer-events: auto;
+}
+
 .file{
     display: none;
 }
-.select {
+
+.selectbrowse {
   display: inline-block;
-  padding: 6px 14px;
-  margin-left: 6px;         /* space after "or" */
-  background-color: #b9aaaac9; /* nice green */
+  padding: 0.3rem 0.8rem;
+  margin-left: 0.375rem;
+  background-color: #b9aaaac9;
   color: white;
   font-weight: 500;
-  border-radius: 6px;
+  border-radius: 0.3rem;
   cursor: pointer;
   opacity: 60%;
   transition: background-color 0.2s ease, transform 0.1s ease;
 }
 
-.select:hover {
+.selectbrowse:hover {
   background-color: #7ab4ee;
 }
 
-.select:active {
+.selectbrowse:active {
   transform: scale(0.97);
+}
+
+
+
+/* Responsive adjustments */
+@media (max-width: 48rem) {
+  .card {
+    padding: 0.75em;
+    max-width: 100%;
+  }
+  
+  .card button {
+    padding: 0.8em 1.5em;
+  }
+  
+  .card .container .image {
+    width: 4rem;
+    height: 4rem;
+  }
+  
+  .selectbrowse {
+    padding: 0.25rem 0.6rem;
+    font-size: 0.9rem;
+  }
+}
+
+@media (max-width: 30rem) {
+  .card .container .image {
+    width: 3.1rem;
+    height: 3.1rem;
+  }
+  
+  .card .dropbox {
+    font-size: 0.9rem;
+  }
 }

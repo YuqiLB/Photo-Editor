@@ -4,8 +4,11 @@ import React, { useState, useRef } from 'react';
 const Home = () => {
   const [images, setImages] = useState([]);
   const [isDragging, setIsDragging] = useState(false);
+  const [isUploading, setIsuploading] = useState(false);
   const fileInputRef = useRef(null);
+  const fileObjectsRef = useRef([]);
 
+  
   function selectFiles() {
     fileInputRef.current.click();
   }
@@ -15,6 +18,7 @@ const Home = () => {
     for (let i = 0; i < files.length; i++) {
       if (files[i].type.split('/')[0] !== 'image') continue;
       if (!images.some((e) => e.name === files[i].name)) {
+        fileObjectsRef.current.push(files[i]); //store file object
         setImages((prevImages) => [
           ...prevImages,
           {
@@ -32,27 +36,59 @@ const Home = () => {
 
   function deleteImage(index) {
     setImages((prevImages) => prevImages.filter((_, i) => i !== index));
+    fileObjectsRef.current = fileObjectsRef.current.filter((_, i) => i !== index);
   }
 
   function onDragOver(event) {
     event.preventDefault();
+    event.stopPropagation();
     setIsDragging(true);
     event.dataTransfer.dropEffect = "copy";
   }
 
   function onDragLeave(event) {
     event.preventDefault();
+    event.stopPropagation();
     setIsDragging(false);
+    
   }
 
   function onDrop(event) {
     event.preventDefault();
+    event.stopPropagation();
     setIsDragging(false);
     handleFiles(event.dataTransfer.files);
   }
 
-  function uploadImages() {
-    console.log("images: ", images);
+  async function uploadImages() {
+    if (fileObjectsRef.current.length === 0) {
+      alert('Please select at least one image');
+      return;
+    }
+    setIsuploading(true);
+
+    try{
+      const formData = new FormData();
+      fileObjectsRef.current.forEach((file) => {
+        formData.append('images', file);
+      });
+
+      const response = await fetch('http://localhost:3000/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+      if (!response.ok) {
+        throw new Error('Upload failed');
+      }
+      const data = await response.json();
+      console.log('Upload successful:', data);
+      alert('Images uploaded successfully!');
+    } catch (error) {
+      console.error('Error uploading images:', error);
+      alert('Error uploading images');
+    } finally {
+      setIsuploading(false);
+    }
   }
 
   return (
@@ -71,8 +107,8 @@ const Home = () => {
           <span className="select">Drop images here</span>
         ) : (
           <>
-            Drag and Drop here or
-            <span className="select" role="button" onClick={selectFiles}>
+            Drag and Drop here or 
+            <span className="selectbrowse" role="button" onClick={selectFiles}>
               Browse
             </span>
           </>
@@ -99,8 +135,8 @@ const Home = () => {
         ))}
       </div>
 
-      <button type="button" onClick={uploadImages}>
-        Upload
+      <button className="upload" type="button" onClick={uploadImages} disabled={isUploading}>
+        {isUploading ? 'Uploading...' : 'Upload'}
       </button>
     </div>
   );
