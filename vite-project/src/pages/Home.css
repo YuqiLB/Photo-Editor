@@ -1,4 +1,20 @@
-/* Center the card on the page */
+@import url('https://fonts.googleapis.com/css2?family=Finger+Paint&display=swap');
+
+:root {
+  --scale: 1.6; /* quick scaler (1.0 = normal 1.5 = 50% larger) */
+  --base-padding: calc(1em * var(--scale));
+  --base-font-size: calc(1rem * var(--scale));
+  --base-border-radius: calc(0.3rem * var(--scale));
+  --card-max-width: calc(37.5rem * var(--scale));
+  --dropbox-min-height: calc(3em * var(--scale));
+  --image-size: calc(4.6rem * var(--scale));
+  --container-max-height: calc(12.5rem * var(--scale));
+}
+
+* {
+  font-family: 'Finger Paint', cursive;
+}
+
 body {
   display: flex;
   justify-content: center;
@@ -7,15 +23,17 @@ body {
   margin: 0;
   padding: 1.25rem;
   box-sizing: border-box;
+  background: #F4ECE1;
 }
 
 .card{
-    padding: 1em;
-    box-shadow: 0 0 0.3rem #ffdfdf;
-    border-radius: 0.3rem;
+    padding: var(--base-padding);
+    box-shadow: 0 0 var(--base-border-radius) #7f90ed;
+    border-radius: var(--base-border-radius);
     overflow: hidden;
-    max-width: 37.5rem;
+    max-width: var(--card-max-width);
     width: 100%;
+    background: #6D6E87;
 }
 
 .card .top{
@@ -26,44 +44,47 @@ body {
     font-weight: bold;
     color: blue;
     margin: 0 0 1em 0;
+    font-size: var(--base-font-size);
 }
 
-.card button{
+.card button, .upload{
     outline: 0;
     border: 0;
     color: #fff;
-    border-radius: 0.25rem;
+    border-radius: calc(0.25rem * var(--scale));
     cursor: pointer; 
     font-weight: 400;
-    padding: 1em 2em;
+    padding: var(--base-padding) calc(2em * var(--scale));
     width: 100%;
-    background: blue;
-    margin-top: 1em;
+    background: #7FA1EA;
+    margin-top: var(--base-padding);
     transition: background-color 0.2s ease, transform 0.1s ease;
+    font-size: var(--base-font-size);
 }
-.card button:hover{
+.card button:hover, .upload:hover{
     background: #0000cc;
 }
 
 .card .dropbox{
-    min-height: 3em;
-    padding: 1em;
-    border: 0.1rem dashed blue;
-    border-radius: 0.3rem;
-    color: blue;
-    background: #ffdfdf;
+    min-height: var(--dropbox-min-height);
+    padding: var(--base-padding);
+    border: calc(0.1rem * var(--scale)) dashed #6D6E87;
+    border-radius: var(--base-border-radius);
+    color: #FFFFFF;
+    background: #3874C2;
     display: flex;
     justify-content: center;
     align-items: center;
     user-select: none;
     -webkit-user-select: none;
-    margin-top: 1em;
+    margin-top: var(--base-padding);
     flex-wrap: wrap;
     text-align: center;
+    font-size: var(--base-font-size);
 }
 
 .card .dropbox .visible{
-    font-size: 1rem;
+    font-size: var(--base-font-size);
 }
 
 .card .selectbrowse {
@@ -89,31 +110,31 @@ body {
     justify-content: flex-start;
     align-items: flex-start;
     flex-wrap: wrap;
-    max-height: 12.5rem;
+    max-height: var(--container-max-height);
     overflow-y: auto;
-    margin-top: 0.625rem;
+    margin-top: calc(0.625rem * var(--scale));
 }
 
 .card .container .image{
-    width: 4.6rem;
-    margin-right: 0.3rem;
-    height: 4.6rem;
+    width: var(--image-size);
+    margin-right: var(--base-border-radius);
+    height: var(--image-size);
     position: relative;
-    margin-bottom: 0.5rem;
+    margin-bottom: calc(0.5rem * var(--scale));
 }
 
 .card .container .image img{
     width: 100%;
     height: 100%;
-    border-radius: 0.3rem;
+    border-radius: var(--base-border-radius);
     object-fit: cover;
 }
 
 .card .container .image span{
     position: absolute;
-    top: 0.1rem;
-    right: 0.5rem;
-    font-size: 1.25rem;
+    top: calc(0.1rem * var(--scale));
+    right: calc(0.5rem * var(--scale));
+    font-size: calc(1.25rem * var(--scale));
     cursor: pointer;
 }
 
@@ -131,21 +152,31 @@ body {
   pointer-events: auto;
 }
 
+.error-message {
+  color: red;
+  padding: 0.625rem;
+  margin: 0.625rem 0;
+  background-color: #ffe6e6;
+  border-radius: 0.25rem;
+  border: 0.0625rem solid red;
+}
+
 .file{
     display: none;
 }
 
 .selectbrowse {
   display: inline-block;
-  padding: 0.3rem 0.8rem;
-  margin-left: 0.375rem;
+  padding: calc(0.3rem * var(--scale)) calc(0.8rem * var(--scale));
+  margin-left: calc(0.375rem * var(--scale));
   background-color: #b9aaaac9;
   color: white;
   font-weight: 500;
-  border-radius: 0.3rem;
+  border-radius: var(--base-border-radius);
   cursor: pointer;
   opacity: 60%;
   transition: background-color 0.2s ease, transform 0.1s ease;
+  font-size: var(--base-font-size);
 }
 
 .selectbrowse:hover {
@@ -158,7 +189,7 @@ body {
 
 
 
-/* Responsive adjustments */
+/* responsive */
 @media (max-width: 48rem) {
   .card {
     padding: 0.75em;

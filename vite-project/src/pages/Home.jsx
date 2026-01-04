@@ -1,10 +1,11 @@
 import './Home.css' 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef } from 'react'; //hook for component state and for references
 
 const Home = () => {
   const [images, setImages] = useState([]);
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsuploading] = useState(false);
+  const [error, setError] = useState('');
   const fileInputRef = useRef(null);
   const fileObjectsRef = useRef([]);
 
@@ -15,33 +16,44 @@ const Home = () => {
 
   function handleFiles(files) {
     if (!files || files.length === 0) return;
+    
+    setError(''); // Clear previous errors
+    let hasNonImageFile = false;
+    
     for (let i = 0; i < files.length; i++) {
-      if (files[i].type.split('/')[0] !== 'image') continue;
-      if (!images.some((e) => e.name === files[i].name)) {
-        fileObjectsRef.current.push(files[i]); //store file object
+      if (files[i].type.split('/')[0] !== 'image') {
+        hasNonImageFile = true;
+        continue;
+      }
+      if (!images.some((e) => e.name === files[i].name)) { // checking for dupe file name
+        fileObjectsRef.current.push(files[i]); //store file object to array
         setImages((prevImages) => [
           ...prevImages,
           {
             name: files[i].name,
-            url: URL.createObjectURL(files[i]),
+            url: URL.createObjectURL(files[i]), //temporary image preview
           },
         ]);
       }
     }
+    
+    if (hasNonImageFile) { //wrong file type error handling
+      setError('Error: Only image files are allowed. Please upload valid image files (PNG, JPG, GIF, etc.).');
+    }
   }
 
   function onFileSelect(event) {
-    handleFiles(event.target.files);
+    handleFiles(event.target.files); //pass files for processing
   }
 
   function deleteImage(index) {
-    setImages((prevImages) => prevImages.filter((_, i) => i !== index));
+    setImages((prevImages) => prevImages.filter((_, i) => i !== index)); 
     fileObjectsRef.current = fileObjectsRef.current.filter((_, i) => i !== index);
-  }
+  }//keeps items except for the one at specified index
 
   function onDragOver(event) {
-    event.preventDefault();
-    event.stopPropagation();
+    event.preventDefault(); //default is opening file in browser
+    event.stopPropagation();// no bubbling
     setIsDragging(true);
     event.dataTransfer.dropEffect = "copy";
   }
@@ -92,53 +104,58 @@ const Home = () => {
   }
 
   return (
-    <div className="card">
-      <div className="top">
-        <p>Drag & Drop Image Upload</p>
-      </div>
+    <>
+      <div className="card">
 
-      <div
-        className="dropbox"
-        onDragOver={onDragOver}
-        onDragLeave={onDragLeave}
-        onDrop={onDrop}
-      >
-        {isDragging ? (
-          <span className="select">Drop images here</span>
-        ) : (
-          <>
-            Drag and Drop here or 
-            <span className="selectbrowse" role="button" onClick={selectFiles}>
-              Browse
-            </span>
-          </>
+        {error && (
+          <div className="error-message">
+            {error}
+          </div>
         )}
 
-        <input
-          name="file"
-          type="file"
-          className="file"
-          multiple
-          ref={fileInputRef}
-          onChange={onFileSelect}
-        />
-      </div>
+        <div
+          className="dropbox"
+          onDragOver={onDragOver}
+          onDragLeave={onDragLeave}
+          onDrop={onDrop}
+        >
+          {isDragging ? (
+            <span className="select">Drop images here</span>
+          ) : (
+            <>
+              Drag and Drop here or ‎
+              <span className="selectbrowse" role="button" onClick={selectFiles}>
+                Browse
+              </span>
+            </>
+          )}
 
-      <div className="container">
-        {images.map((image, index) => (
-          <div className="image" key={index}>
-            <span className="delete" onClick={() => deleteImage(index)}>
-              &times;
-            </span>
-            <img src={image.url} alt={image.name} />
-          </div>
-        ))}
+          <input
+            name="file"
+            type="file"
+            className="file"
+            multiple
+            ref={fileInputRef}
+            onChange={onFileSelect}
+          />
+        </div>
+
+        <div className="container">
+          {images.map((image, index) => (
+            <div className="image" key={index}>
+              <span className="delete" onClick={() => deleteImage(index)}>
+                &times;
+              </span>
+              <img src={image.url} alt={image.name} />
+            </div>
+          ))}
+        </div>
       </div>
 
       <button className="upload" type="button" onClick={uploadImages} disabled={isUploading}>
         {isUploading ? 'Uploading...' : 'Upload'}
       </button>
-    </div>
+    </>
   );
 };
 
