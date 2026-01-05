@@ -1,5 +1,6 @@
 import './Home.css' 
-import React, { useState, useRef, useNavigate } from 'react'; //hook for component state and for references
+import React, { useState, useRef } from 'react'; //hook for component state and for references
+import { useNavigate } from 'react-router-dom';
 
 const Home = () => {
   const [images, setImages] = useState([]);
@@ -8,6 +9,7 @@ const Home = () => {
   const [error, setError] = useState('');
   const fileInputRef = useRef(null);
   const fileObjectsRef = useRef([]);
+  const navigate = useNavigate();
 
   
   function selectFiles() {
