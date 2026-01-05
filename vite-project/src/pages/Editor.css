@@ -1,0 +1,66 @@
+@import url('https://fonts.googleapis.com/css2?family=Finger+Paint&display=swap');
+
+.editor-container {
+  font-family: 'Finger Paint', cursive;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 2rem;
+  background: #F4ECE1;
+}
+
+.editor-container h1 {
+  color: #6D6E87;
+  margin-bottom: 1rem;
+  font-size: 2.5rem;
+}
+
+.editor-container p {
+  color: #3874C2;
+  font-size: 1.2rem;
+  margin-bottom: 2rem;
+}
+
+.editor-content {
+  background: #6D6E87;
+  padding: 2rem;
+  border-radius: 0.5rem;
+  box-shadow: 0 0 0.5rem #7f90ed;
+  color: #fff;
+  max-width: 1200px;
+  width: 100%;
+}
+
+.uploaded-images {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 1.5rem;
+  width: 100%;
+}
+
+.uploaded-image {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: #3874C2;
+  padding: 1rem;
+  border-radius: 0.5rem;
+}
+
+.uploaded-image img {
+  width: 100%;
+  height: 200px;
+  object-fit: cover;
+  border-radius: 0.3rem;
+  margin-bottom: 0.5rem;
+}
+
+.image-name {
+  color: #fff;
+  font-size: 0.8rem;
+  text-align: center;
+  word-break: break-word;
+  margin: 0;
+}

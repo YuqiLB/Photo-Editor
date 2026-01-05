@@ -1,5 +1,5 @@
 import './Home.css' 
-import React, { useState, useRef } from 'react'; //hook for component state and for references
+import React, { useState, useRef, useNavigate } from 'react'; //hook for component state and for references
 
 const Home = () => {
   const [images, setImages] = useState([]);
@@ -25,7 +25,12 @@ const Home = () => {
         hasNonImageFile = true;
         continue;
       }
-      if (!images.some((e) => e.name === files[i].name)) { // checking for dupe file name
+      // Check if file already exists by comparing with stored file objects
+      const isDuplicate = fileObjectsRef.current.some(
+        (existingFile) => existingFile.name === files[i].name && existingFile.size === files[i].size
+      );
+      
+      if (!isDuplicate) {
         fileObjectsRef.current.push(files[i]); //store file object to array
         setImages((prevImages) => [
           ...prevImages,
@@ -94,7 +99,8 @@ const Home = () => {
       }
       const data = await response.json();
       console.log('Upload successful:', data);
-      alert('Images uploaded successfully!');
+      // Navigate to editor page with uploaded image data
+      navigate('/editor', { state: { uploadedImages: data.files } });
     } catch (error) {
       console.error('Error uploading images:', error);
       alert('Error uploading images');
@@ -114,7 +120,7 @@ const Home = () => {
         )}
 
         <div
-          className="dropbox"
+          className={`dropbox ${isDragging ? 'dragging' : ''}`}
           onDragOver={onDragOver}
           onDragLeave={onDragLeave}
           onDrop={onDrop}
@@ -140,7 +146,8 @@ const Home = () => {
           />
         </div>
 
-        <div className="container">
+        <div className={`container ${images.length > 0 ? 'has-images' : ''}`}> {//check for images so it dynamically changes
+        }
           {images.map((image, index) => (
             <div className="image" key={index}>
               <span className="delete" onClick={() => deleteImage(index)}>

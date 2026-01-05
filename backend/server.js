@@ -39,13 +39,16 @@ const upload = multer({
   }
 });
 
+// Serve uploaded images statically
+app.use('/uploads', express.static(uploadDir));
+
 // Upload endpoint
 app.post('/api/upload', upload.array('images', 10), (req, res) => {
   try {
     const uploadedFiles = req.files.map(file => ({
       filename: file.filename,
       originalName: file.originalname,
-      path: file.path,
+      url: `http://localhost:${PORT}/uploads/${file.filename}`,
       size: file.size,
       mimetype: file.mimetype
     }));

@@ -54,12 +54,15 @@ body {
     border-radius: calc(0.25rem * var(--scale));
     cursor: pointer; 
     font-weight: 400;
-    padding: var(--base-padding) calc(2em * var(--scale));
-    width: 100%;
+    padding: calc(0.6em * var(--scale)) calc(1.5em * var(--scale));
+    width: 60%;
     background: #7FA1EA;
     margin-top: var(--base-padding);
+    margin-left: auto;
+    margin-right: auto;
+    display: block;
     transition: background-color 0.2s ease, transform 0.1s ease;
-    font-size: var(--base-font-size);
+    font-size: calc(0.85rem * var(--scale));
 }
 .card button:hover, .upload:hover{
     background: #0000cc;
@@ -81,10 +84,16 @@ body {
     flex-wrap: wrap;
     text-align: center;
     font-size: var(--base-font-size);
+    box-sizing: border-box;
 }
 
 .card .dropbox .visible{
     font-size: var(--base-font-size);
+}
+
+.card .dropbox.dragging{
+    background: #5A8FD7;
+    border-color: #7FA1EA;
 }
 
 .card .selectbrowse {
@@ -110,9 +119,13 @@ body {
     justify-content: flex-start;
     align-items: flex-start;
     flex-wrap: wrap;
-    max-height: var(--container-max-height);
     overflow-y: auto;
     margin-top: calc(0.625rem * var(--scale));
+    box-sizing: border-box;
+}
+
+.card .container.has-images{
+    max-height: var(--container-max-height);
 }
 
 .card .container .image{
