@@ -8,23 +8,28 @@ const Editor = () => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isFinished, setIsFinished] = useState(false);
   
-  // Crop box state
+  //crop box state stores position as percentages to save over to next img
   const [cropBox, setCropBox] = useState({ x: 50, y: 50, width: 200, height: 150 });
+  const [savedCropPosition, setSavedCropPosition] = useState(null); // keep position for next image
   const [isDragging, setIsDragging] = useState(false);
   const [isResizing, setIsResizing] = useState(false);
   const [resizeHandle, setResizeHandle] = useState(null);
   const [imageBounds, setImageBounds] = useState({ width: 0, height: 0 });
   
+  //storage for cropped images
+  const [croppedImages, setCroppedImages] = useState([]);
+  
   const imageRef = useRef(null);
+  const canvasRef = useRef(null);
   const dragStartRef = useRef({ x: 0, y: 0 });
   const cropBoxRef = useRef(cropBox);
   
-  // Keep cropBoxRef in sync
+  
   useEffect(() => {
     cropBoxRef.current = cropBox;
-  }, [cropBox]);
+  }, [cropBox]);//sync cropBoxRef
 
-  // Update image bounds when image loads or changes
+  //update boundaries for image
   const updateImageBounds = useCallback(() => {
     if (imageRef.current) {
       const img = imageRef.current;
@@ -44,22 +49,33 @@ const Editor = () => {
   const handleImageLoad = () => {
     const newBounds = updateImageBounds();
     if (newBounds) {
-      // Reset crop box to center of new image
-      setCropBox({
-        x: Math.max(0, (newBounds.width - 200) / 2),
-        y: Math.max(0, (newBounds.height - 150) / 2),
-        width: Math.min(200, newBounds.width),
-        height: Math.min(150, newBounds.height)
-      });
+      // center cropbox unless there's a saved position already
+      if (savedCropPosition) {
+        
+        setCropBox(constrainCropBox({
+          x: savedCropPosition.x,
+          y: savedCropPosition.y,
+          width: savedCropPosition.width,
+          height: savedCropPosition.height
+        }, newBounds));// constrain to boundaries of image
+      } else {
+        //recentering crop box
+        setCropBox({
+          x: Math.max(0, (newBounds.width - 200) / 2),
+          y: Math.max(0, (newBounds.height - 150) / 2),
+          width: Math.min(200, newBounds.width),
+          height: Math.min(150, newBounds.height)
+        });
+      }
     }
   };
 
-  // Update bounds on window resize (for fullscreen)
+// fullscreen resize handling
   useEffect(() => {
     const handleResize = () => {
       const newBounds = updateImageBounds();
       if (newBounds) {
-        // Constrain existing crop box to new bounds
+        //constrain to new box
         setCropBox(prev => {
           const newBox = { ...prev };
           newBox.width = Math.max(50, Math.min(newBox.width, newBounds.width));
@@ -80,7 +96,7 @@ const Editor = () => {
     };
   }, [updateImageBounds]);
 
-  // Constrain crop box to image bounds
+  //constrain to bounds
   const constrainCropBox = useCallback((box, bounds) => {
     const newBox = { ...box };
     newBox.width = Math.max(50, Math.min(newBox.width, bounds.width));
@@ -89,6 +105,70 @@ const Editor = () => {
     newBox.y = Math.max(0, Math.min(newBox.y, bounds.height - newBox.height));
     return newBox;
   }, []);
+
+  
+  const cropImage = useCallback(() => {
+    if (!imageRef.current) return null;
+    
+    const img = imageRef.current;
+    const displayedWidth = img.getBoundingClientRect().width;
+    const displayedHeight = img.getBoundingClientRect().height;
+    
+    //scale b/w natural and display
+    const scaleX = img.naturalWidth / displayedWidth;
+    const scaleY = img.naturalHeight / displayedHeight;
+    
+    
+    const cropX = cropBox.x * scaleX;
+    const cropY = cropBox.y * scaleY;
+    const cropWidth = cropBox.width * scaleX;//crop coords
+    const cropHeight = cropBox.height * scaleY;//crop coords
+    
+    
+    const canvas = document.createElement('canvas');
+    canvas.width = cropWidth;
+    canvas.height = cropHeight;
+    const ctx = canvas.getContext('2d'); //drawing image onto canvas
+    
+    try {
+      ctx.drawImage(
+        img,
+        cropX, cropY, cropWidth, cropHeight,
+        0, 0, cropWidth, cropHeight
+      );
+      
+      return canvas.toDataURL('image/png');
+    } catch (e) {
+      console.error('Error cropping image:', e); //error returning
+      return null;
+    }
+  }, [cropBox]);
+
+ 
+  const handleCropAndNext = useCallback(() => {
+   
+    const croppedDataUrl = cropImage();
+    if (croppedDataUrl) {
+      setCroppedImages(prev => [...prev, {
+        url: croppedDataUrl,
+        originalName: uploadedImages[currentIndex]?.originalName || `Image ${currentIndex + 1}`
+      }]);
+    }
+    
+    //save crop box position for next image
+    setSavedCropPosition({
+      x: cropBox.x,
+      y: cropBox.y,
+      width: cropBox.width,
+      height: cropBox.height
+    });
+    
+    if (currentIndex < uploadedImages.length - 1) {
+      setCurrentIndex(prev => prev + 1);
+    } else if (currentIndex === uploadedImages.length - 1) {
+      setIsFinished(true);
+    }
+  }, [cropImage, cropBox, currentIndex, uploadedImages]);
 
   const handleMouseDown = (e, handle = null) => {
     e.preventDefault();
@@ -104,6 +184,22 @@ const Editor = () => {
     }
   };
 
+  // keybaord shortcut for enter
+  useEffect(() => {
+    const handleKeyPress = (event) => {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        handleCropAndNext();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyPress);
+    
+    return () => {
+      window.removeEventListener('keydown', handleKeyPress);
+    };
+  }, [handleCropAndNext]);
+
   useEffect(() => {
     const handleMouseMove = (e) => {
       if (!isDragging && !isResizing) return;
@@ -111,7 +207,7 @@ const Editor = () => {
       const deltaX = e.clientX - dragStartRef.current.x;
       const deltaY = e.clientY - dragStartRef.current.y;
       
-      // Get current bounds
+      //get the bounds function
       const currentBounds = imageRef.current ? {
         width: imageRef.current.getBoundingClientRect().width,
         height: imageRef.current.getBoundingClientRect().height
@@ -165,26 +261,14 @@ const Editor = () => {
       setResizeHandle(null);
     };
 
-    const handleKeyPress = (event) => {
-      if (event.key === 'Enter') {
-        if (currentIndex < uploadedImages.length - 1) {
-          setCurrentIndex(prev => prev + 1);
-        } else if (currentIndex === uploadedImages.length - 1) {
-          setIsFinished(true);
-        }
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyPress);
     window.addEventListener('mousemove', handleMouseMove);
     window.addEventListener('mouseup', handleMouseUp);
     
     return () => {
-      window.removeEventListener('keydown', handleKeyPress);
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
     };
-  }, [currentIndex, uploadedImages.length, isDragging, isResizing, resizeHandle, imageBounds, constrainCropBox]);
+  }, [isDragging, isResizing, resizeHandle, imageBounds, constrainCropBox]);
 
   if (uploadedImages.length === 0) {
     return (
@@ -198,10 +282,25 @@ const Editor = () => {
 
   if (isFinished) {
     return (
-      <div className="editor-container">
+      <div className="editor-container finished-view">
         <div className="all-done">
           <h1>All Done!</h1>
-          <p>You've viewed all {uploadedImages.length} images</p>
+          <p>You've cropped {croppedImages.length} images</p>
+        </div>
+        <div className="cropped-images-gallery">
+          {croppedImages.map((image, index) => (
+            <div key={index} className="cropped-image-card">
+              <img src={image.url} alt={image.originalName} />
+              <p className="cropped-image-name">{image.originalName}</p>
+              <a 
+                href={image.url} 
+                download={`cropped_${image.originalName}`}
+                className="download-btn"
+              >
+                Download
+              </a>
+            </div>
+          ))}
         </div>
       </div>
     );
@@ -222,6 +321,7 @@ const Editor = () => {
             alt={currentImage.originalName}
             onLoad={handleImageLoad}
             draggable={false}
+            crossOrigin="anonymous"
           />
           {imageBounds.width > 0 && (
             <div 

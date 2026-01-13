@@ -222,3 +222,68 @@
     opacity: 0.5;
   }
 }
+
+/* Finished view styles */
+.finished-view {
+  overflow-y: auto;
+  padding: 2rem;
+  justify-content: flex-start;
+}
+
+.cropped-images-gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 2rem;
+  width: 100%;
+  max-width: 1400px;
+  padding: 2rem;
+  margin-top: 2rem;
+}
+
+.cropped-image-card {
+  background: rgba(56, 116, 194, 0.2);
+  border-radius: 1rem;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  animation: fadeIn 0.5s ease-out;
+}
+
+.cropped-image-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+}
+
+.cropped-image-card img {
+  max-width: 100%;
+  max-height: 250px;
+  object-fit: contain;
+  border-radius: 0.5rem;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+}
+
+.cropped-image-name {
+  color: #F4ECE1;
+  font-size: 1rem;
+  margin: 1rem 0 0.5rem;
+  text-align: center;
+  word-break: break-word;
+}
+
+.download-btn {
+  background: #3874C2;
+  color: #fff;
+  padding: 0.6rem 1.5rem;
+  border-radius: 2rem;
+  text-decoration: none;
+  font-size: 0.9rem;
+  transition: background 0.3s ease, transform 0.2s ease;
+  margin-top: 0.5rem;
+}
+
+.download-btn:hover {
+  background: #5a9fff;
+  transform: scale(1.05);
+}

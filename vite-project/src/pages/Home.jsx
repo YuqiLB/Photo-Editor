@@ -101,7 +101,7 @@ const Home = () => {
       }
       const data = await response.json();
       console.log('Upload successful:', data);
-      // Navigate to editor page with uploaded image data
+      // navigate to editor page with uploaded image data
       navigate('/editor', { state: { uploadedImages: data.files } });
     } catch (error) {
       console.error('Error uploading images:', error);

@@ -39,8 +39,12 @@ const upload = multer({
   }
 });
 
-// Serve uploaded images statically
-app.use('/uploads', express.static(uploadDir));
+// Serve uploaded images statically with CORS headers
+app.use('/uploads', (req, res, next) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+  next();
+}, express.static(uploadDir));
 
 // Upload endpoint
 app.post('/api/upload', upload.array('images', 10), (req, res) => {
