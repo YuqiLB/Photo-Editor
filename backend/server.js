@@ -5,18 +5,15 @@ const path = require('path');
 const fs = require('fs');
 
 const app = express();
-const PORT = 3000;
+const PORT = 3000; //just can't be same as vite dev server port
 
-// Enable CORS
 app.use(cors());
 
-// Create uploads directory with absolute path
 const uploadDir = path.join(__dirname, 'uploads');
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
 }
 
-// Configure multer for file upload
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     cb(null, uploadDir);
@@ -29,7 +26,7 @@ const storage = multer.diskStorage({
 
 const upload = multer({
   storage: storage,
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit per file
+  limits: { fileSize: 10 * 1024 * 1024 }, //10MB limit per file
   fileFilter: (req, file, cb) => {
     if (file.mimetype.startsWith('image/')) {
       cb(null, true);
@@ -39,14 +36,12 @@ const upload = multer({
   }
 });
 
-// Serve uploaded images statically with CORS headers
 app.use('/uploads', (req, res, next) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
   next();
 }, express.static(uploadDir));
 
-// Upload endpoint
 app.post('/api/upload', upload.array('images', 10), (req, res) => {
   try {
     const uploadedFiles = req.files.map(file => ({

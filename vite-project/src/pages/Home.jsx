@@ -1,5 +1,5 @@
 import './Home.css' 
-import React, { useState, useRef } from 'react'; //hook for component state and for references
+import React, { useState, useRef } from 'react'; 
 import { useNavigate } from 'react-router-dom';
 
 const Home = () => {
@@ -19,7 +19,7 @@ const Home = () => {
   function handleFiles(files) {
     if (!files || files.length === 0) return;
     
-    setError(''); // Clear previous errors
+    setError(''); 
     let hasNonImageFile = false;
     
     for (let i = 0; i < files.length; i++) {
@@ -27,7 +27,6 @@ const Home = () => {
         hasNonImageFile = true;
         continue;
       }
-      // Check if file already exists by comparing with stored file objects
       const isDuplicate = fileObjectsRef.current.some(
         (existingFile) => existingFile.name === files[i].name && existingFile.size === files[i].size
       );
@@ -44,7 +43,7 @@ const Home = () => {
       }
     }
     
-    if (hasNonImageFile) { //wrong file type error handling
+    if (hasNonImageFile) { 
       setError('Error: Only image files are allowed. Please upload valid image files (PNG, JPG, GIF, etc.).');
     }
   }
@@ -56,7 +55,7 @@ const Home = () => {
   function deleteImage(index) {
     setImages((prevImages) => prevImages.filter((_, i) => i !== index)); 
     fileObjectsRef.current = fileObjectsRef.current.filter((_, i) => i !== index);
-  }//keeps items except for the one at specified index
+  }
 
   function onDragOver(event) {
     event.preventDefault(); //default is opening file in browser
@@ -101,7 +100,6 @@ const Home = () => {
       }
       const data = await response.json();
       console.log('Upload successful:', data);
-      // navigate to editor page with uploaded image data
       navigate('/editor', { state: { uploadedImages: data.files } });
     } catch (error) {
       console.error('Error uploading images:', error);
@@ -148,7 +146,7 @@ const Home = () => {
           />
         </div>
 
-        <div className={`container ${images.length > 0 ? 'has-images' : ''}`}> {//check for images so it dynamically changes
+        <div className={`container ${images.length > 0 ? 'has-images' : ''}`}> {//check for images, dynamically changes
         }
           {images.map((image, index) => (
             <div className="image" key={index}>

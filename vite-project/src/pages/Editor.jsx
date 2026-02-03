@@ -8,16 +8,30 @@ const Editor = () => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isFinished, setIsFinished] = useState(false);
   
-  //crop box state stores position as percentages to save over to next img
-  const [cropBox, setCropBox] = useState({ x: 50, y: 50, width: 200, height: 150 });
-  const [savedCropPosition, setSavedCropPosition] = useState(null); // keep position for next image
+  
+  const [cropBox, setCropBox] = useState({ x: 50, y: 50, width: 200, height: 150 });//crop box state stores position as percentages to save over to next img
+  const [savedCropPosition, setSavedCropPosition] = useState(null); //keep position for next image
   const [isDragging, setIsDragging] = useState(false);
   const [isResizing, setIsResizing] = useState(false);
   const [resizeHandle, setResizeHandle] = useState(null);
   const [imageBounds, setImageBounds] = useState({ width: 0, height: 0 });
   
-  //storage for cropped images
-  const [croppedImages, setCroppedImages] = useState([]);
+  const [isBatchProcessing, setIsBatchProcessing] = useState(false);
+  const [batchProgress, setBatchProgress] = useState({ current: 0, total: 0 });
+  const [batchMode, setBatchMode] = useState(''); //'crop', 'filter', or 'both'
+  
+  const [selectedFilter, setSelectedFilter] = useState('none');
+  
+  const colorFilters = [
+    { id: 'none', name: 'Original', filter: 'none' },
+    { id: 'grayscale', name: 'B&W', filter: 'grayscale(100%)' },
+    { id: 'sepia', name: 'Sepia', filter: 'sepia(100%)' },
+    { id: 'vintage', name: 'Vintage', filter: 'sepia(50%) contrast(90%) brightness(90%)' },
+    { id: 'vivid', name: 'Vivid', filter: 'saturate(150%) contrast(110%)' },
+    { id: 'muted', name: 'Muted', filter: 'saturate(60%) brightness(105%)' },
+  ];
+  
+  const [croppedImages, setCroppedImages] = useState([]);//storage for cropped images
   
   const imageRef = useRef(null);
   const canvasRef = useRef(null);
@@ -29,7 +43,6 @@ const Editor = () => {
     cropBoxRef.current = cropBox;
   }, [cropBox]);//sync cropBoxRef
 
-  //update boundaries for image
   const updateImageBounds = useCallback(() => {
     if (imageRef.current) {
       const img = imageRef.current;
@@ -49,7 +62,6 @@ const Editor = () => {
   const handleImageLoad = () => {
     const newBounds = updateImageBounds();
     if (newBounds) {
-      // center cropbox unless there's a saved position already
       if (savedCropPosition) {
         
         setCropBox(constrainCropBox({
@@ -57,25 +69,24 @@ const Editor = () => {
           y: savedCropPosition.y,
           width: savedCropPosition.width,
           height: savedCropPosition.height
-        }, newBounds));// constrain to boundaries of image
+        }, newBounds));//constrain to boundaries of image
       } else {
-        //recentering crop box
+        
         setCropBox({
           x: Math.max(0, (newBounds.width - 200) / 2),
           y: Math.max(0, (newBounds.height - 150) / 2),
           width: Math.min(200, newBounds.width),
           height: Math.min(150, newBounds.height)
-        });
+        });//recentering crop box
       }
     }
   };
 
-// fullscreen resize handling
   useEffect(() => {
     const handleResize = () => {
       const newBounds = updateImageBounds();
-      if (newBounds) {
-        //constrain to new box
+      if (newBounds) { //constrain to new box for screen resize
+        
         setCropBox(prev => {
           const newBox = { ...prev };
           newBox.width = Math.max(50, Math.min(newBox.width, newBounds.width));
@@ -96,8 +107,8 @@ const Editor = () => {
     };
   }, [updateImageBounds]);
 
-  //constrain to bounds
-  const constrainCropBox = useCallback((box, bounds) => {
+  
+  const constrainCropBox = useCallback((box, bounds) => {//constrain to bounds
     const newBox = { ...box };
     newBox.width = Math.max(50, Math.min(newBox.width, bounds.width));
     newBox.height = Math.max(50, Math.min(newBox.height, bounds.height));
@@ -107,14 +118,18 @@ const Editor = () => {
   }, []);
 
   
-  const cropImage = useCallback(() => {
+  const getFilterValue = useCallback((filterId) => {
+    const filter = colorFilters.find(f => f.id === filterId);
+    return filter ? filter.filter : 'none';
+  }, []);
+
+  const cropImage = useCallback((applyFilter = true) => {
     if (!imageRef.current) return null;
     
     const img = imageRef.current;
     const displayedWidth = img.getBoundingClientRect().width;
     const displayedHeight = img.getBoundingClientRect().height;
     
-    //scale b/w natural and display
     const scaleX = img.naturalWidth / displayedWidth;
     const scaleY = img.naturalHeight / displayedHeight;
     
@@ -131,6 +146,11 @@ const Editor = () => {
     const ctx = canvas.getContext('2d'); //drawing image onto canvas
     
     try {
+      
+      if (applyFilter && selectedFilter !== 'none') {
+        ctx.filter = getFilterValue(selectedFilter);
+      }
+      
       ctx.drawImage(
         img,
         cropX, cropY, cropWidth, cropHeight,
@@ -139,10 +159,10 @@ const Editor = () => {
       
       return canvas.toDataURL('image/png');
     } catch (e) {
-      console.error('Error cropping image:', e); //error returning
+      console.error('Error cropping image:', e);//error returning
       return null;
     }
-  }, [cropBox]);
+  }, [cropBox, selectedFilter, getFilterValue]);
 
  
   const handleCropAndNext = useCallback(() => {
@@ -155,7 +175,7 @@ const Editor = () => {
       }]);
     }
     
-    //save crop box position for next image
+    
     setSavedCropPosition({
       x: cropBox.x,
       y: cropBox.y,
@@ -169,6 +189,106 @@ const Editor = () => {
       setIsFinished(true);
     }
   }, [cropImage, cropBox, currentIndex, uploadedImages]);
+
+  const handleBatchProcess = useCallback(async (mode = 'both') => {
+    const remainingCount = uploadedImages.length - currentIndex;
+    if (remainingCount <= 0) return;
+    
+    setIsBatchProcessing(true);
+    setBatchMode(mode);
+    setBatchProgress({ current: 0, total: remainingCount });
+    
+    const newCroppedImages = [];
+    const applyCrop = mode === 'crop' || mode === 'both';
+    const applyFilter = (mode === 'filter' || mode === 'both') && selectedFilter !== 'none';
+    
+    for (let i = currentIndex; i < uploadedImages.length; i++) {
+      const image = uploadedImages[i];
+      
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      
+      await new Promise((resolve, reject) => {
+        img.onload = () => {
+          const maxWidth = window.innerWidth * 0.9;
+          const maxHeight = window.innerHeight * 0.8;
+          
+          let displayedWidth = img.naturalWidth;
+          let displayedHeight = img.naturalHeight;
+          
+          if (displayedWidth > maxWidth) {
+            const ratio = maxWidth / displayedWidth;
+            displayedWidth = maxWidth;
+            displayedHeight *= ratio;
+          }
+          if (displayedHeight > maxHeight) {
+            const ratio = maxHeight / displayedHeight;
+            displayedHeight = maxHeight;
+            displayedWidth *= ratio;
+          }
+          
+          const scaleX = img.naturalWidth / displayedWidth;
+          const scaleY = img.naturalHeight / displayedHeight;
+          
+          let finalCropX, finalCropY, finalCropWidth, finalCropHeight;
+          
+          if (applyCrop) {
+            const cropX = cropBox.x * scaleX;
+            const cropY = cropBox.y * scaleY;
+            const cropWidth = cropBox.width * scaleX;
+            const cropHeight = cropBox.height * scaleY;
+            
+            finalCropX = Math.max(0, Math.min(cropX, img.naturalWidth - cropWidth));
+            finalCropY = Math.max(0, Math.min(cropY, img.naturalHeight - cropHeight));
+            finalCropWidth = Math.min(cropWidth, img.naturalWidth - finalCropX);
+            finalCropHeight = Math.min(cropHeight, img.naturalHeight - finalCropY);
+          } else {
+            finalCropX = 0;
+            finalCropY = 0;
+            finalCropWidth = img.naturalWidth;
+            finalCropHeight = img.naturalHeight;
+          }
+          
+          const canvas = document.createElement('canvas');
+          canvas.width = finalCropWidth;
+          canvas.height = finalCropHeight;
+          const ctx = canvas.getContext('2d');
+          
+          try {
+            if (applyFilter) {
+              ctx.filter = getFilterValue(selectedFilter);
+            }
+            
+            ctx.drawImage(
+              img,
+              finalCropX, finalCropY, finalCropWidth, finalCropHeight,
+              0, 0, finalCropWidth, finalCropHeight
+            );
+            
+            const croppedDataUrl = canvas.toDataURL('image/png');
+            newCroppedImages.push({
+              url: croppedDataUrl,
+              originalName: image.originalName || `Image ${i + 1}`
+            });
+          } catch (e) {
+            console.error('Error processing image:', e);
+          }
+          
+          resolve();
+        };
+        img.onerror = reject;
+        img.src = image.url;
+      });
+      
+      setBatchProgress({ current: i - currentIndex + 1, total: remainingCount });
+      
+      await new Promise(resolve => setTimeout(resolve, 50));
+    }
+    
+    setCroppedImages(prev => [...prev, ...newCroppedImages]);
+    setIsBatchProcessing(false);
+    setIsFinished(true);
+  }, [cropBox, currentIndex, uploadedImages, selectedFilter, getFilterValue]);
 
   const handleMouseDown = (e, handle = null) => {
     e.preventDefault();
@@ -184,7 +304,7 @@ const Editor = () => {
     }
   };
 
-  // keybaord shortcut for enter
+  
   useEffect(() => {
     const handleKeyPress = (event) => {
       if (event.key === 'Enter') {
@@ -207,7 +327,6 @@ const Editor = () => {
       const deltaX = e.clientX - dragStartRef.current.x;
       const deltaY = e.clientY - dragStartRef.current.y;
       
-      //get the bounds function
       const currentBounds = imageRef.current ? {
         width: imageRef.current.getBoundingClientRect().width,
         height: imageRef.current.getBoundingClientRect().height
@@ -279,6 +398,18 @@ const Editor = () => {
       </div>
     );
   }
+  const handleDownloadAll = () => {
+    croppedImages.forEach((image, index) => {
+      setTimeout(() => {
+        const link = document.createElement('a');
+        link.href = image.url;
+        link.download = `cropped_${image.originalName}`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }, index * 200); 
+    });
+  };
 
   if (isFinished) {
     return (
@@ -286,6 +417,9 @@ const Editor = () => {
         <div className="all-done">
           <h1>All Done!</h1>
           <p>You've cropped {croppedImages.length} images</p>
+          <button className="download-all-btn" onClick={handleDownloadAll}>
+            Download All ({croppedImages.length})
+          </button>
         </div>
         <div className="cropped-images-gallery">
           {croppedImages.map((image, index) => (
@@ -313,6 +447,59 @@ const Editor = () => {
       <div className="slideshow-counter">
         {currentIndex + 1} / {uploadedImages.length}
       </div>
+
+      <div className="filter-sidebar">
+        <h3 className="filter-title">Filters</h3>
+        <div className="filter-grid">
+          {colorFilters.map((filter) => (
+            <button
+              key={filter.id}
+              className={`filter-btn ${selectedFilter === filter.id ? 'active' : ''}`}
+              onClick={() => setSelectedFilter(filter.id)}
+              title={filter.name}
+            >
+              <div className="filter-preview">
+                <img 
+                  src={currentImage.url} 
+                  alt={filter.name}
+                  style={{ filter: filter.filter }}
+                  draggable={false}
+                />
+              </div>
+            </button>
+          ))}
+        </div>
+      </div>
+      {uploadedImages.length - currentIndex > 1 && (
+        <div className="batch-sidebar">
+          <h3 className="batch-title">Batch Apply</h3>
+          <p className="batch-count">{uploadedImages.length - currentIndex} images</p>
+          <div className="batch-buttons">
+            <button 
+              className="batch-btn crop-only"
+              onClick={() => handleBatchProcess('crop')}
+              disabled={isBatchProcessing}
+            >
+              Crop Only
+            </button>
+            <button 
+              className="batch-btn filter-only"
+              onClick={() => handleBatchProcess('filter')}
+              disabled={isBatchProcessing || selectedFilter === 'none'}
+            >
+              Filter Only
+            </button>
+            <button 
+              className="batch-btn both"
+              onClick={() => handleBatchProcess('both')}
+              disabled={isBatchProcessing}
+            >
+              Crop + Filter
+            </button>
+          </div>
+        </div>
+      )}
+      
       <div className="fullscreen-image">
         <div className="image-wrapper">
           <img 
@@ -322,6 +509,7 @@ const Editor = () => {
             onLoad={handleImageLoad}
             draggable={false}
             crossOrigin="anonymous"
+            style={{ filter: getFilterValue(selectedFilter) }}
           />
           {imageBounds.width > 0 && (
             <div 
@@ -350,8 +538,47 @@ const Editor = () => {
       </div>
       <div className="image-info">
         <p className="image-name">{currentImage.originalName}</p>
-        <p className="instruction">Drag to move crop box • Drag corners to resize • Press Enter to continue</p>
+        <p className="instruction">Drag to move crop box - Drag corners to resize</p>
+        
+        <div className="navigation-controls">
+          <button 
+            className="nav-btn prev-btn"
+            onClick={() => setCurrentIndex(prev => prev - 1)}
+            disabled={currentIndex === 0}
+          >
+            ← Previous
+          </button>
+          
+          <button 
+            className="nav-btn next-btn"
+            onClick={handleCropAndNext}
+          >
+            {currentIndex === uploadedImages.length - 1 ? 'Finish →' : 'Next →'}
+          </button>
+        </div>
       </div>
+      
+      {isBatchProcessing && (
+        <div className="batch-overlay">
+          <div className="batch-modal">
+            <h2>Batch Processing...</h2>
+            <p className="batch-mode-label">
+              {batchMode === 'crop' && '...Applying Crop'}
+              {batchMode === 'filter' && '...Applying Filter'}
+              {batchMode === 'both' && '...Applying Crop + Filter'}
+            </p>
+            <div className="batch-progress-bar">
+              <div 
+                className="batch-progress-fill" 
+                style={{ width: `${(batchProgress.current / batchProgress.total) * 100}%` }}
+              />
+            </div>
+            <p className="batch-progress-text">
+              Processing {batchProgress.current} of {batchProgress.total} images
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
