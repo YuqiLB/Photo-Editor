@@ -78,6 +78,8 @@ const Editor = () => {
   const [batchMode, setBatchMode] = useState(''); //'crop', 'filter', or 'both'
   
   const [selectedFilter, setSelectedFilter] = useState('none');
+  const [areFiltersCollapsed, setAreFiltersCollapsed] = useState(true);
+  const isFilterPanelOpen = !areFiltersCollapsed;
   
   
   const [croppedImages, setCroppedImages] = useState([]);//storage for cropped images
@@ -516,9 +518,21 @@ const Editor = () => {
         {currentIndex + 1} / {uploadedImages.length}
       </div>
 
-      <div className="filter-sidebar">
-        <h3 className="filter-title">Filters</h3>
-        <div className="filter-grid">
+      <div
+        className={`filter-sidebar${isFilterPanelOpen ? '' : ' collapsed'}`}
+      >
+        <button
+          type="button"
+          className="filter-toggle"
+          aria-label={isFilterPanelOpen ? 'Collapse filters' : 'Expand filters'}
+          aria-expanded={isFilterPanelOpen}
+          aria-controls="filter-options"
+          onClick={() => setAreFiltersCollapsed(collapsed => !collapsed)}
+        >
+          Filters
+          <span aria-hidden="true">‹</span>
+        </button>
+        <div className="filter-grid" id="filter-options" inert={!isFilterPanelOpen} aria-hidden={!isFilterPanelOpen}>
           {colorFilters.map((filter) => (
             <button
               key={filter.id}
