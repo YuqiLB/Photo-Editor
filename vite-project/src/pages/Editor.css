@@ -7,7 +7,9 @@
   align-items: center;
   justify-content: center;
   height: 100vh;
+  height: 100dvh;
   max-height: 100vh;
+  padding-bottom: 10rem;
   background: #2C2C3E;
   position: fixed;
   top: 0;
@@ -171,7 +173,7 @@
 
 .fullscreen-image {
   width: calc(100vw - 280px);
-  height: 65vh;
+  height: min(65vh, calc(100dvh - 190px));
   display: flex;
   align-items: center;
   justify-content: center;
@@ -184,11 +186,13 @@
   display: inline-block;
   max-width: 100%;
   max-height: 100%;
+  /* Keep the crop mask from dimming controls outside the photo. */
+  clip-path: inset(-12px);
 }
 
 .fullscreen-image img {
   max-width: calc(100vw - 300px);
-  max-height: 65vh;
+  max-height: min(65vh, calc(100dvh - 190px));
   object-fit: contain;
   border-radius: 0rem;
   display: block;
@@ -288,13 +292,18 @@
 
 .image-info {
   position: absolute;
-  bottom: 1rem;
+  bottom: 0;
+  z-index: 200;
+  background: #2C2C3E;
   text-align: center;
   width: 100%;
-  padding: 0 2rem;
+  padding: 0.75rem 1rem max(1rem, env(safe-area-inset-bottom));
 }
 
 .image-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   color: #F4ECE1;
   font-size: 1.2rem;
   margin: 0.3rem 0;
@@ -372,7 +381,7 @@
 
 .cropped-images-gallery {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));
   gap: 2rem;
   width: 100%;
   max-width: 1400px;
@@ -410,6 +419,8 @@
 }
 
 .download-btn {
+  border: none;
+  cursor: pointer;
   background: #3874C2;
   color: #fff;
   padding: 0.6rem 1.5rem;
@@ -432,6 +443,7 @@
 }
 
 .nav-btn {
+  min-height: 44px;
   background: #3874C2;
   color: #fff;
   border: none;
@@ -448,7 +460,9 @@
 }
 
 .nav-btn:disabled {
-  opacity: 0.4;
+  background: #49566b;
+  color: #dce3ee;
+  opacity: 1;
   cursor: not-allowed;
 }
 
@@ -558,4 +572,59 @@
 
 .download-all-btn:hover {
   transform: translateY(-3px);
+}
+
+.finish-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+.finish-actions .download-all-btn {
+  margin-top: 0;
+}
+
+.download-format {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: #F4ECE1;
+}
+
+.download-format select,
+.home-btn {
+  padding: 0.7rem 1rem;
+  border: 1px solid #5a9fff;
+  border-radius: 0.2rem;
+  background: #2C2C3E;
+  color: #fff;
+  text-decoration: none;
+}
+
+.download-error {
+  color: #ffb4a8;
+}
+
+.download-btn:disabled,
+.download-all-btn:disabled {
+  opacity: 0.65;
+  cursor: wait;
+}
+
+@media (max-width: 600px) {
+  .fullscreen-image {
+    width: calc(100vw - 2rem);
+  }
+
+  .fullscreen-image img {
+    max-width: calc(100vw - 2rem);
+  }
+
+  .finished-view,
+  .cropped-images-gallery {
+    padding: 1rem;
+  }
 }

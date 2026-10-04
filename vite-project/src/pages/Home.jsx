@@ -1,16 +1,23 @@
 import './Home.css' 
-import React, { useState, useRef } from 'react'; 
+import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 const Home = () => {
   const [images, setImages] = useState([]);
   const [isDragging, setIsDragging] = useState(false);
-  const [isUploading, setIsuploading] = useState(false);
   const [error, setError] = useState('');
   const fileInputRef = useRef(null);
   const fileObjectsRef = useRef([]);
+  const previewUrlsRef = useRef(new Set());
   const navigate = useNavigate();
 
+  useEffect(() => {
+    const previewUrls = previewUrlsRef.current;
+    return () => {
+      previewUrls.forEach((url) => URL.revokeObjectURL(url));
+      previewUrls.clear();
+    };
+  }, []);
   
   function selectFiles() {
     fileInputRef.current.click();
@@ -23,21 +30,24 @@ const Home = () => {
     let hasNonImageFile = false;
     
     for (let i = 0; i < files.length; i++) {
-      if (files[i].type.split('/')[0] !== 'image') {
+      const file = files[i];
+      if (file.type.split('/')[0] !== 'image') {
         hasNonImageFile = true;
         continue;
       }
       const isDuplicate = fileObjectsRef.current.some(
-        (existingFile) => existingFile.name === files[i].name && existingFile.size === files[i].size
+        (existingFile) => existingFile.name === file.name && existingFile.size === file.size
       );
       
       if (!isDuplicate) {
-        fileObjectsRef.current.push(files[i]); //store file object to array
+        fileObjectsRef.current.push(file); //store file object to array
+        const url = URL.createObjectURL(file);
+        previewUrlsRef.current.add(url);
         setImages((prevImages) => [
           ...prevImages,
           {
-            name: files[i].name,
-            url: URL.createObjectURL(files[i]), //temporary image preview
+            name: file.name,
+            url,
           },
         ]);
       }
@@ -50,9 +60,12 @@ const Home = () => {
 
   function onFileSelect(event) {
     handleFiles(event.target.files); //pass files for processing
+    event.target.value = ''; // Allow selecting a deleted file again.
   }
 
   function deleteImage(index) {
+    URL.revokeObjectURL(images[index].url);
+    previewUrlsRef.current.delete(images[index].url);
     setImages((prevImages) => prevImages.filter((_, i) => i !== index)); 
     fileObjectsRef.current = fileObjectsRef.current.filter((_, i) => i !== index);
   }
@@ -78,35 +91,15 @@ const Home = () => {
     handleFiles(event.dataTransfer.files);
   }
 
-  async function uploadImages() {
+  function uploadImages() {
     if (fileObjectsRef.current.length === 0) {
-      alert('Please select at least one image');
+      setError('Please select at least one image.');
       return;
     }
-    setIsuploading(true);
 
-    try{
-      const formData = new FormData();
-      fileObjectsRef.current.forEach((file) => {
-        formData.append('images', file);
-      });
-
-      const response = await fetch('http://localhost:3000/api/upload', {
-        method: 'POST',
-        body: formData,
-      });
-      if (!response.ok) {
-        throw new Error('Upload failed');
-      }
-      const data = await response.json();
-      console.log('Upload successful:', data);
-      navigate('/editor', { state: { uploadedImages: data.files } });
-    } catch (error) {
-      console.error('Error uploading images:', error);
-      alert('Error uploading images');
-    } finally {
-      setIsuploading(false);
-    }
+    // Pass files rather than preview URLs so the editor can own its URLs and
+    // recreate them after refresh or Back/Forward navigation.
+    navigate('/editor', { state: { imageFiles: [...fileObjectsRef.current] } });
   }
 
   return (
@@ -114,7 +107,7 @@ const Home = () => {
       <div className="card">
 
         {error && (
-          <div className="error-message">
+          <div className="error-message" role="alert">
             {error}
           </div>
         )}
@@ -139,6 +132,7 @@ const Home = () => {
           <input
             name="file"
             type="file"
+            accept="image/*"
             className="file"
             multiple
             ref={fileInputRef}
@@ -159,8 +153,8 @@ const Home = () => {
         </div>
       </div>
 
-      <button className="upload" type="button" onClick={uploadImages} disabled={isUploading}>
-        {isUploading ? 'Uploading...' : 'Upload'}
+      <button className="upload" type="button" onClick={uploadImages}>
+        Upload
       </button>
     </>
   );

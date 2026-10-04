@@ -1,12 +1,69 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { useLocation } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import './Editor.css';
+
+const colorFilters = [
+  { id: 'none', name: 'Original', filter: 'none' },
+  { id: 'grayscale', name: 'B&W', filter: 'grayscale(100%)' },
+  { id: 'sepia', name: 'Sepia', filter: 'sepia(100%)' },
+  { id: 'vintage', name: 'Vintage', filter: 'sepia(50%) contrast(90%) brightness(90%)' },
+  { id: 'vivid', name: 'Vivid', filter: 'saturate(150%) contrast(110%)' },
+  { id: 'muted', name: 'Muted', filter: 'saturate(60%) brightness(105%)' },
+];
+
+const downloadFormats = { png: 'image/png', webp: 'image/webp', jpg: 'image/jpeg' };
+
+async function downloadImage(image, format) {
+  const source = new Image();
+  source.src = image.url;
+  await source.decode();
+  const canvas = document.createElement('canvas');
+  canvas.width = source.naturalWidth;
+  canvas.height = source.naturalHeight;
+  const ctx = canvas.getContext('2d');
+  // JPEG has no transparency; use a white background for transparent photos.
+  if (format === 'jpg') {
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+  }
+  ctx.drawImage(source, 0, 0);
+  const blob = await new Promise(resolve => canvas.toBlob(resolve, downloadFormats[format], 0.92));
+  if (!blob || blob.type !== downloadFormats[format]) {
+    throw new Error(`Your browser could not export ${format.toUpperCase()}. Please choose another format.`);
+  }
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `cropped_${image.originalName.replace(/\.[^.]+$/, '')}.${format}`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  // Allow the browser time to start reading the download before releasing it.
+  setTimeout(() => URL.revokeObjectURL(url), 10000);
+}
 
 const Editor = () => {
   const location = useLocation();
-  const uploadedImages = location.state?.uploadedImages || [];
+  const imageFiles = location.state?.imageFiles;
+  const [uploadedImages, setUploadedImages] = useState([]);
+
+  useEffect(() => {
+    // Recreate URLs whenever the browser restores this entry's selected files.
+    const localImages = (imageFiles || []).map((file) => ({
+      originalName: file.name,
+      url: URL.createObjectURL(file),
+    }));
+    setUploadedImages(localImages);
+
+    return () => {
+      localImages.forEach((image) => URL.revokeObjectURL(image.url));
+    };
+  }, [imageFiles]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isFinished, setIsFinished] = useState(false);
+  const [downloadFormat, setDownloadFormat] = useState('png');
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [downloadError, setDownloadError] = useState('');
   
   
   const [cropBox, setCropBox] = useState({ x: 50, y: 50, width: 200, height: 150 });//crop box state stores position as percentages to save over to next img
@@ -22,19 +79,10 @@ const Editor = () => {
   
   const [selectedFilter, setSelectedFilter] = useState('none');
   
-  const colorFilters = [
-    { id: 'none', name: 'Original', filter: 'none' },
-    { id: 'grayscale', name: 'B&W', filter: 'grayscale(100%)' },
-    { id: 'sepia', name: 'Sepia', filter: 'sepia(100%)' },
-    { id: 'vintage', name: 'Vintage', filter: 'sepia(50%) contrast(90%) brightness(90%)' },
-    { id: 'vivid', name: 'Vivid', filter: 'saturate(150%) contrast(110%)' },
-    { id: 'muted', name: 'Muted', filter: 'saturate(60%) brightness(105%)' },
-  ];
   
   const [croppedImages, setCroppedImages] = useState([]);//storage for cropped images
   
   const imageRef = useRef(null);
-  const canvasRef = useRef(null);
   const dragStartRef = useRef({ x: 0, y: 0 });
   const cropBoxRef = useRef(cropBox);
   
@@ -166,13 +214,18 @@ const Editor = () => {
 
  
   const handleCropAndNext = useCallback(() => {
-   
+    if (isFinished || isBatchProcessing || !imageRef.current?.complete) return;
     const croppedDataUrl = cropImage();
+    if (!croppedDataUrl) return;
     if (croppedDataUrl) {
-      setCroppedImages(prev => [...prev, {
-        url: croppedDataUrl,
-        originalName: uploadedImages[currentIndex]?.originalName || `Image ${currentIndex + 1}`
-      }]);
+      setCroppedImages(prev => {
+        const next = [...prev];
+        next[currentIndex] = {
+          url: croppedDataUrl,
+          originalName: uploadedImages[currentIndex]?.originalName || `Image ${currentIndex + 1}`
+        };
+        return next;
+      });
     }
     
     
@@ -188,7 +241,7 @@ const Editor = () => {
     } else if (currentIndex === uploadedImages.length - 1) {
       setIsFinished(true);
     }
-  }, [cropImage, cropBox, currentIndex, uploadedImages]);
+  }, [cropImage, cropBox, currentIndex, uploadedImages, isFinished, isBatchProcessing]);
 
   const handleBatchProcess = useCallback(async (mode = 'both') => {
     const remainingCount = uploadedImages.length - currentIndex;
@@ -285,7 +338,7 @@ const Editor = () => {
       await new Promise(resolve => setTimeout(resolve, 50));
     }
     
-    setCroppedImages(prev => [...prev, ...newCroppedImages]);
+    setCroppedImages(prev => [...prev.slice(0, currentIndex), ...newCroppedImages]);
     setIsBatchProcessing(false);
     setIsFinished(true);
   }, [cropBox, currentIndex, uploadedImages, selectedFilter, getFilterValue]);
@@ -307,7 +360,8 @@ const Editor = () => {
   
   useEffect(() => {
     const handleKeyPress = (event) => {
-      if (event.key === 'Enter') {
+      if (event.key === 'Enter' && !event.repeat &&
+          !event.target.closest('button, a, input, select, textarea')) {
         event.preventDefault();
         handleCropAndNext();
       }
@@ -394,21 +448,23 @@ const Editor = () => {
       <div className="editor-container">
         <div className="no-images">
           <h1>No images uploaded yet.</h1>
+          <Link to="/">Select photos</Link>
         </div>
       </div>
     );
   }
-  const handleDownloadAll = () => {
-    croppedImages.forEach((image, index) => {
-      setTimeout(() => {
-        const link = document.createElement('a');
-        link.href = image.url;
-        link.download = `cropped_${image.originalName}`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-      }, index * 200); 
-    });
+  const handleDownload = async (images) => {
+    setIsDownloading(true);
+    setDownloadError('');
+    try {
+      for (const image of images) {
+        await downloadImage(image, downloadFormat);
+      }
+    } catch (error) {
+      setDownloadError(error.message || 'Could not download the image. Please try again.');
+    } finally {
+      setIsDownloading(false);
+    }
   };
 
   if (isFinished) {
@@ -417,22 +473,34 @@ const Editor = () => {
         <div className="all-done">
           <h1>All Done!</h1>
           <p>You've cropped {croppedImages.length} images</p>
-          <button className="download-all-btn" onClick={handleDownloadAll}>
-            Download All ({croppedImages.length})
-          </button>
+          <div className="finish-actions">
+            <label className="download-format">
+              Download format
+              <select value={downloadFormat} onChange={event => setDownloadFormat(event.target.value)} disabled={isDownloading}>
+                <option value="png">PNG</option>
+                <option value="webp">WebP</option>
+                <option value="jpg">JPG</option>
+              </select>
+            </label>
+            <button className="download-all-btn" onClick={() => handleDownload(croppedImages)} disabled={isDownloading}>
+              {isDownloading ? 'Preparing downloads...' : `Download All (${croppedImages.length})`}
+            </button>
+            <Link className="home-btn" to="/">Back to Home</Link>
+          </div>
+          {downloadError && <p className="download-error" role="alert">{downloadError}</p>}
         </div>
         <div className="cropped-images-gallery">
           {croppedImages.map((image, index) => (
             <div key={index} className="cropped-image-card">
               <img src={image.url} alt={image.originalName} />
               <p className="cropped-image-name">{image.originalName}</p>
-              <a 
-                href={image.url} 
-                download={`cropped_${image.originalName}`}
+              <button
+                onClick={() => handleDownload([image])}
+                disabled={isDownloading}
                 className="download-btn"
               >
-                Download
-              </a>
+                Download {downloadFormat.toUpperCase()}
+              </button>
             </div>
           ))}
         </div>
